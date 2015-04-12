@@ -1,12 +1,14 @@
 package com.teamdc.stephendiniz.microwave;
 
+import java.applet.Applet;
+import java.applet.AudioClip;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.net.URL;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -24,7 +26,7 @@ public class GUI extends JFrame {
 	private final int X_BUTTONS = 1049;
 	private final int Y_BUTTONS = 186;
 	private final int W_BUTTONS = 107;
-	private final int H_BUTTONS = 148;
+	private final int H_BUTTONS = 218;
 
 	private final int DISPLAY_OFFSET = 62;
 	
@@ -43,6 +45,9 @@ public class GUI extends JFrame {
 	private final int W_BUTTON_ZERO = 107;
 	private final int H_BUTTON_ZERO = 31;
 	
+	private final int W_BUTTON_BOTTOM = 107;
+	private final int H_BUTTON_BOTTOM = 18;
+	
 	private JPanel panel;
 
 	private JPanel displayPanelLeft;
@@ -54,11 +59,19 @@ public class GUI extends JFrame {
 	private ImageIcon[] displayIcons = new ImageIcon[10];
 	private JLabel[] displayLabels = new JLabel[4];
 
-	private BufferedImage[] buttonNumbers;
+	private BufferedImage[] buttonNumbers = new BufferedImage[10];
 	private JLabel[] buttonLabels = new JLabel[10];
+	
+	private BufferedImage start;
+	private JLabel startLabel;
+	
+	private BufferedImage stopClear;
+	private JLabel stopClearLabel;
 	
 	private int numbersPresent = 0;
 	private int[] numbers = new int[4];
+	
+	private boolean running = false;
 	
 	public GUI(String windowTitle, int width, int height) {
 		initialize(windowTitle, width, height);
@@ -96,6 +109,7 @@ public class GUI extends JFrame {
 		this.setTitle(windowTitle);
 		this.setContentPane(panel);
 		this.setSize(new Dimension(width, height));
+		this.setResizable(false);
 		this.setVisible(true);
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
@@ -160,10 +174,11 @@ public class GUI extends JFrame {
 	private void initializeButtonPanel() {
 		// Initialize Buttons
 		BufferedImage buttons_BI = null;
-		buttonNumbers = new BufferedImage[10];
 		try {
 			buttons_BI = ImageIO.read(getClass().getResource("/images/buttons.png"));
 			buttonNumbers[9] = ImageIO.read(getClass().getResource("/images/button_zero.png"));
+			start = ImageIO.read(getClass().getResource("/images/start.png"));
+			stopClear = ImageIO.read(getClass().getResource("/images/stop_clear.png"));
 		}
 		catch(IOException ioe) {
 			ioe.printStackTrace();
@@ -195,14 +210,24 @@ public class GUI extends JFrame {
 		buttonLabels[9].setBounds(0, (6 * PAD_BUTTON) + (3 * H_BUTTON), W_BUTTON_ZERO, H_BUTTON_ZERO);
 		buttonPanel.add(buttonLabels[9]);
 		
+		startLabel = new JLabel(new ImageIcon(start));
+		startLabel.setBounds(0, (30 * PAD_BUTTON) + (4 * H_BUTTON), W_BUTTON_BOTTOM, H_BUTTON_BOTTOM);
+		buttonPanel.add(startLabel);
+		
+		stopClearLabel = new JLabel(new ImageIcon(stopClear));
+		stopClearLabel.setBounds(0, (15 * PAD_BUTTON) + (5 * H_BUTTON), W_BUTTON_BOTTOM, H_BUTTON_BOTTOM);
+		buttonPanel.add(stopClearLabel);
+		
 		// Add Click Listeners
 		for(int i = 0; i < (buttonLabels.length - 1); i++) {
 			final int index = i;
 			buttonLabels[i].addMouseListener(new MouseListener() {
 				public void mousePressed(MouseEvent e) {
+					playSound(getClass().getResource("/sound/beep.wav"));
 					if(canShift()) {
 						shiftNumbers();
 						addToDisplay((index + 1), 3);
+						numbersPresent++;
 					}
 					else {
 						return;
@@ -218,12 +243,42 @@ public class GUI extends JFrame {
 		}
 		buttonLabels[9].addMouseListener(new MouseListener() {
 			public void mousePressed(MouseEvent e) {
+				playSound(getClass().getResource("/sound/beep.wav"));
 				if(canShift()) {
 					shiftNumbers();
 					addToDisplay(0, 3);
 				}
 				else {
 					return;
+				}
+			}
+			
+			// Unimplemented Methods
+			public void mouseClicked(MouseEvent arg0) {}
+			public void mouseEntered(MouseEvent e) {}
+			public void mouseExited(MouseEvent e) {}
+			public void mouseReleased(MouseEvent e) {}
+		});
+		startLabel.addMouseListener(new MouseListener() {
+			public void mousePressed(MouseEvent e) {
+				playSound(getClass().getResource("/sound/beep.wav"));
+				// START
+			}
+			
+			// Unimplemented Methods
+			public void mouseClicked(MouseEvent arg0) {}
+			public void mouseEntered(MouseEvent e) {}
+			public void mouseExited(MouseEvent e) {}
+			public void mouseReleased(MouseEvent e) {}
+		});
+		stopClearLabel.addMouseListener(new MouseListener() {
+			public void mousePressed(MouseEvent e) {
+				playSound(getClass().getResource("/sound/beep.wav"));
+				if(isRunning()) {
+					// PAUSE
+				}
+				else {
+					clearDisplay();
 				}
 			}
 			
@@ -242,8 +297,10 @@ public class GUI extends JFrame {
 	
 	private void clearDisplay() {
 		for(int i = 0; i < 4; i++) {
-			displayLabels[i].setIcon(displayIcons[i]);
+			addToDisplay(0, i);
 		}
+		
+		numbersPresent = 0;
 	}
 	
 	private void shiftNumbers() {
@@ -258,5 +315,18 @@ public class GUI extends JFrame {
 		}
 		
 		return false;
+	}
+	
+	private void playSound(URL fileURL) {
+		AudioClip clip = Applet.newAudioClip(fileURL);
+		clip.play();
+	}
+	
+	private void setRunning(boolean running) {
+		this.running = running;
+	}
+	
+	private boolean isRunning() {
+		return running;
 	}
 }
