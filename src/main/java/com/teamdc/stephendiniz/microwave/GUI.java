@@ -9,6 +9,8 @@ import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -71,7 +73,10 @@ public class GUI extends JFrame {
 	private int numbersPresent = 0;
 	private int[] numbers = new int[4];
 	
+	private Timer timer;
 	private boolean running = false;
+	
+	Thread soundThread;
 	
 	public GUI(String windowTitle, int width, int height) {
 		initialize(windowTitle, width, height);
@@ -262,7 +267,26 @@ public class GUI extends JFrame {
 		startLabel.addMouseListener(new MouseListener() {
 			public void mousePressed(MouseEvent e) {
 				playSound(getClass().getResource("/sound/beep.wav"));
-				// START
+				if(getSecondsOnDisplay() > 0) {
+					setRunning(true);
+					loopSound(getClass().getResource("/sound/microwave_running.wav"));
+					timer = new Timer();
+					timer.schedule(new TimerTask(){
+			            @Override
+			            public void run() {
+			                if(getSecondsOnDisplay() > 0) {
+			                	decrementTime();
+			                	updateDisplay();
+			                }
+			                else {
+			                	soundThread.interrupt();
+			                	soundThread = null;
+			                	playSound(getClass().getResource("/sound/microwave_stopping.wav"));
+			                	this.cancel();
+			                }
+			            }   
+			        }, 0, 1000);
+				}
 			}
 			
 			// Unimplemented Methods
@@ -275,10 +299,16 @@ public class GUI extends JFrame {
 			public void mousePressed(MouseEvent e) {
 				playSound(getClass().getResource("/sound/beep.wav"));
 				if(isRunning()) {
-					// PAUSE
+					setRunning(false);
+					soundThread.interrupt();
+                	soundThread = null;
+					timer.cancel();
 				}
 				else {
 					clearDisplay();
+					if(timer != null) {
+						timer.cancel();
+					}
 				}
 			}
 			
@@ -322,11 +352,62 @@ public class GUI extends JFrame {
 		clip.play();
 	}
 	
+	private void loopSound(final URL fileURL) {
+		soundThread = new Thread() {
+			AudioClip clip = Applet.newAudioClip(fileURL);
+			public void run() {
+				clip.loop();
+				clip.play();
+			}
+			public void interrupt() {
+				clip.stop();
+			}
+		};
+		soundThread.start();
+	}
+	
 	private void setRunning(boolean running) {
 		this.running = running;
 	}
 	
 	private boolean isRunning() {
 		return running;
+	}
+	
+	private int getSecondsOnDisplay() {
+		int left = Integer.parseInt(numbers[0] + "" + numbers[1]);
+		int right = Integer.parseInt(numbers[2] + "" + numbers[3]);
+		
+		return (left * 60) + right;
+	}
+	
+	private void decrementTime() {
+		int left = Integer.parseInt(numbers[0] + "" + numbers[1]);
+		int right = Integer.parseInt(numbers[2] + "" + numbers[3]);
+		
+		if(right > 0) {
+			right--;
+			String rightString = Integer.toString(right);
+			rightString = (rightString.length() == 1)?"0" + rightString:rightString;
+			
+			numbers[2] = Integer.parseInt(rightString.charAt(0) + "");
+			numbers[3] = Integer.parseInt(rightString.charAt(1) + "");
+		}
+		else {
+			left--;
+			String leftString = Integer.toString(left);
+			leftString = (leftString.length() == 1)?"0" + leftString:leftString;
+			
+			numbers[0] = Integer.parseInt(leftString.charAt(0) + "");
+			numbers[1] = Integer.parseInt(leftString.charAt(1) + "");
+			numbers[2] = 5;
+			numbers[3] = 9;
+		}
+	}
+	
+	private void updateDisplay() {
+		for(int i = 0; i < 4; i++) {
+			addToDisplay(numbers[i], i);
+		}
 	}
 }
